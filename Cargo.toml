@@ -1,0 +1,9 @@
+[package]
+name = "auto_battle"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "A 3D single-lane auto-battle learning project built with Bevy"
+
+[dependencies]
+bevy = { version = "0.20.0", default-features = false, features = ["3d", "ui"] }
