@@ -1,5 +1,16 @@
 use bevy::prelude::*;
 
+#[derive(Component)]
+enum Team {
+    Red,
+    Blue,
+}
+
+#[derive(Component)]
+struct MoveSpeed{
+    units_per_second: f32,
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -10,6 +21,7 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, (setup_scene, setup_units))
+        .add_systems(Update, move_units)
         .run();
 }
 
@@ -64,16 +76,42 @@ fn setup_units(
         ..default()
     });
 
+    // 红
     commands.spawn((
+        Team::Red,
+        MoveSpeed{units_per_second: 1.0},
         Mesh3d(unit_mesh.clone()),
         MeshMaterial3d(red_meterial),
         Transform::from_xyz(-6.0, 0.5, 0.0),
     ));
 
+    // 蓝
     commands.spawn((
+        Team::Blue,
+        MoveSpeed{units_per_second: 1.0},
         Mesh3d(unit_mesh),
         MeshMaterial3d(blue_meterial),
         Transform::from_xyz(6.0,0.5,0.0),
     ));
+}
 
+/// 移动系统
+fn move_units(time: Res<Time>, mut units: Query<(&Team, &MoveSpeed, &mut Transform)>){
+    for (team, speed, mut transform) in units{
+        // 距离 = 每秒速度 * 帧数花费秒数
+        let distance = speed.units_per_second * time.delta_secs();
+        // 移动限制 0.6 防止双方贴合，留点距离
+        match team{
+            Team::Red => {
+                if transform.translation.x < -0.6{
+                    transform.translation.x = (transform.translation.x + distance).min(-0.6);
+                }
+            },
+            Team::Blue => {
+                if transform.translation.x > 0.6 {
+                    transform.translation.x = (transform.translation.x - distance).max(0.6);
+                }
+            }
+        }
+    }
 }
