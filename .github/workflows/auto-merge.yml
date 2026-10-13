@@ -1,0 +1,70 @@
+name: Auto-merge into main
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the pushed commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Merge into main
+        env:
+          TARGET_BRANCH: main
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${TARGET_BRANCH:?TARGET_BRANCH is required}"
+          : "${SOURCE_BRANCH:?SOURCE_BRANCH is required}"
+          : "${SOURCE_SHA:?SOURCE_SHA is required}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Every push must be based on the latest target; never force-push.
+          for attempt in {1..5}; do
+            git fetch origin "+refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+            base_sha=$(git rev-parse "refs/remotes/origin/$TARGET_BRANCH")
+            git checkout --detach "$base_sha"
+
+            if git merge-base --is-ancestor "$SOURCE_SHA" HEAD; then
+              echo "Commit $SOURCE_SHA is already merged into $TARGET_BRANCH."
+              exit 0
+            fi
+
+            if ! git merge --no-ff "$SOURCE_SHA" -m "Auto-merge $SOURCE_BRANCH into $TARGET_BRANCH ($SOURCE_SHA)"; then
+              git merge --abort
+              echo "::error::Merge conflict: merge $SOURCE_BRANCH into $TARGET_BRANCH manually."
+              exit 1
+            fi
+
+            if git push origin "HEAD:refs/heads/$TARGET_BRANCH"; then
+              exit 0
+            fi
+
+            git fetch origin "+refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+            if [[ $(git rev-parse "refs/remotes/origin/$TARGET_BRANCH") == "$base_sha" ]]; then
+              echo "::error::Push rejected. Check Actions write permissions and branch protection for $TARGET_BRANCH."
+              exit 1
+            fi
+
+            echo "Target branch changed during merge; retrying ($attempt/5)."
+          done
+
+          echo "::error::Target branch kept changing; rerun this workflow."
+          exit 1

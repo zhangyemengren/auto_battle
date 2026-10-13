@@ -9,14 +9,15 @@ fn main() {
             }),
             ..default()
         }))
-        .add_systems(Startup, setup_scene)
+        .add_systems(Startup, (setup_scene, setup_units))
         .run();
 }
 
+/// 设置场景
 fn setup_scene(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands, // 实体
+    mut meshes: ResMut<Assets<Mesh>>, // 形状
+    mut materials: ResMut<Assets<StandardMaterial>>, //外观
 ) {
     // 相机
     commands.spawn((
@@ -42,4 +43,37 @@ fn setup_scene(
         })),
         Transform::default(),
     ));
+}
+
+/// 创建单位
+fn setup_units(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // 共享网格句柄
+    let unit_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+
+    let red_meterial = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.85, 0.12, 0.12),
+        ..default()
+    });
+
+    let blue_meterial = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.12, 0.30, 0.90),
+        ..default()
+    });
+
+    commands.spawn((
+        Mesh3d(unit_mesh.clone()),
+        MeshMaterial3d(red_meterial),
+        Transform::from_xyz(-6.0, 0.5, 0.0),
+    ));
+
+    commands.spawn((
+        Mesh3d(unit_mesh),
+        MeshMaterial3d(blue_meterial),
+        Transform::from_xyz(6.0,0.5,0.0),
+    ));
+
 }
