@@ -1,0 +1,20 @@
+# Rust build output
+/target/
+
+# Local IDE configuration
+/.idea/
+/.vscode/
+
+# Local development plans
+/.plan/
+
+# OS and editor temporary files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Local environment files
+.env
+.env.*
+!.env.example
