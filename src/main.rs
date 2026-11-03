@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{camera::ScalingMode, prelude::*};
@@ -13,6 +14,12 @@ const BOARD_MARGIN: f32 = 2.0;
 struct HexCell {
     column: u32,
     row: u32,
+}
+
+#[derive(Resource)]
+struct CellMaterials{
+    normal: Handle<StandardMaterial>,
+    selected: Handle<StandardMaterial>,
 }
 
 impl HexCell {
@@ -38,13 +45,16 @@ fn board_size() -> Vec2 {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::srgb(0.055, 0.075, 0.09)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Auto Battle".into(),
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Auto Battle".into(),
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
+            MeshPickingPlugin,
+        ))
         .add_systems(Startup, (setup_camera, setup_board))
         .run();
 }
@@ -72,10 +82,20 @@ fn setup_board(
 ) {
     // 共享正六边形网格和材质，略微缩小每格以露出深色网格线。
     let mesh = meshes.add(RegularPolygon::new(HEX_RADIUS - HEX_GAP / 2.0, 6));
-    let material = materials.add(StandardMaterial {
+    let normal = materials.add(StandardMaterial {
         base_color: Color::srgb(0.22, 0.38, 0.24),
         unlit: true,
         ..default()
+    });
+    let selected = materials.add(StandardMaterial{
+        base_color: Color::srgb(0.42, 0.68, 0.44),
+        unlit: true,
+        ..default()
+    });
+
+    commands.insert_resource(CellMaterials{
+        normal: normal.clone(),
+        selected,
     });
 
     for row in 0..BOARD_ROWS {
@@ -84,10 +104,22 @@ fn setup_board(
             commands.spawn((
                 cell,
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(material.clone()),
+                MeshMaterial3d(normal.clone()),
                 Transform::from_translation(cell.center())
                     .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-            ));
+            ))
+                .observe(setup_color::<PointerOver>)
+                .observe(setup_color::<PointerOut>);
         }
+    }
+}
+
+fn setup_color<E: EntityEvent>(item: On<E>, cell_materials: Res<CellMaterials>, mut query: Query<&mut MeshMaterial3d<StandardMaterial>>) {
+    if let Ok(mut material) = query.get_mut(item.event_target()) {
+        material.0 = if TypeId::of::<E>() == TypeId::of::<PointerOver>() {
+            cell_materials.selected.clone()
+        } else {
+            cell_materials.normal.clone()
+        };
     }
 }

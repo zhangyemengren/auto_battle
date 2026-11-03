@@ -6,4 +6,4 @@ rust-version = "1.99"
 description = "An auto-battle learning project with a 20x20 hexagonal board built with Bevy"
 
 [dependencies]
-bevy = { version = "0.20.0", default-features = false, features = ["3d", "ui"] }
+bevy = { version = "0.20.0", default-features = false, features = ["3d", "ui", "bevy_picking", "mesh_picking"] }

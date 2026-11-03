@@ -5,9 +5,6 @@
 /.idea/
 /.vscode/
 
-# Local development plans
-/.plan/
-
 # OS and editor temporary files
 .DS_Store
 *.swp
